@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  firstName String?
+  lastName  String?
+  avatar    String?
+  isActive  Boolean  @default(true)
+  isVerified Boolean @default(false)
+  
+  subscription UserSubscription?
+  prompts      Prompt[]
+  outputs      GeneratedOutput[]
+  sessions     UserSession[]
+  usage        UsageLog[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("users")
+}
+
+model UserSession {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  isActive  Boolean  @default(true)
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@map("user_sessions")
+}
+
+model UserSubscription {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  plan              SubscriptionPlan
+  status            SubscriptionStatus
+  stripeCustomerId  String?
+  stripeSubscriptionId String?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean @default(false)
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("user_subscriptions")
+}
+
+model Prompt {
+  id          String     @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  content     String
+  type        ContentType
+  style       Json?      // Style parameters like color palette, motion speed
+  isPublic    Boolean    @default(false)
+  
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  outputs GeneratedOutput[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("prompts")
+}
+
+model GeneratedOutput {
+  id           String      @id @default(cuid())
+  userId       String
+  promptId     String
+  type         ContentType
+  status       GenerationStatus
+  filePath     String?
+  thumbnailPath String?
+  metadata     Json?       // Resolution, duration, model used, etc.
+  processingTime Int?      // In seconds
+  errorMessage String?
+  
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prompt Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("generated_outputs")
+}
+
+model AudioTrack {
+  id          String @id @default(cuid())
+  name        String
+  filePath    String
+  duration    Int    // In seconds
+  genre       String?
+  isDefault   Boolean @default(false)
+  
+  createdAt DateTime @default(now())
+  
+  @@map("audio_tracks")
+}
+
+model UsageLog {
+  id              String      @id @default(cuid())
+  userId          String
+  action          String      // "generate_image", "generate_video", "api_call"
+  resourceType    ContentType?
+  tokensUsed      Int?
+  processingTime  Int?        // In seconds
+  cost            Decimal?    // Cost in credits/dollars
+  metadata        Json?
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@map("usage_logs")
+}
+
+model BillingRecord {
+  id              String          @id @default(cuid())
+  userId          String
+  amount          Decimal
+  currency        String          @default("usd")
+  description     String
+  status          PaymentStatus
+  stripePaymentId String?
+  
+  createdAt DateTime @default(now())
+  
+  @@map("billing_records")
+}
+
+enum ContentType {
+  IMAGE
+  VIDEO
+}
+
+enum GenerationStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum SubscriptionPlan {
+  FREE
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  UNPAID
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
