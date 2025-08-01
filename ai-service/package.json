@@ -1,0 +1,15 @@
+{
+  "name": "anime-ai-service",
+  "version": "1.0.0",
+  "description": "AI service for anime content generation",
+  "scripts": {
+    "dev": "python main.py",
+    "start": "python main.py",
+    "test": "python -m pytest tests/",
+    "lint": "black . && flake8 .",
+    "install-models": "python scripts/download_models.py"
+  },
+  "keywords": ["ai", "anime", "stable-diffusion", "fastapi"],
+  "author": "Anime SaaS Platform",
+  "license": "MIT"
+}
